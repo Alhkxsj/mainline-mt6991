@@ -1,0 +1,188 @@
+// SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+/*
+ * realme GT7 (RMX6688) Bluetooth (MT6653 / connv3) nodes.
+ *
+ * The MT6991 Bluetooth controller lives in connsys and is driven over the
+ * AP UART3 (ttyS3) with the downstream MTK line discipline (N_MTK).  Adapted
+ * from the vendor MT6991 device tree.
+ */
+
+/ {
+	/*
+	 * 208 MHz baud clock for UART3.  The vendor describes it as clk208m;
+	 * the bootloader already configures the UART divisor against it, so a
+	 * fixed clock matching the boot state is enough here.
+	 */
+	clk208m: clk208m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <208000000>;
+		clock-output-names = "clk208m";
+	};
+
+	/* Pin UART0 -> ttyS0 (console) and UART3 -> ttyS3 (BT). */
+	aliases {
+		serial0 = &uart0;
+		serial3 = &uart3;
+	};
+
+	bt: bt {
+		compatible = "mediatek,bt";
+		sleep-en = <1>;
+		/*
+		 * The BT UART is routed through the UARTHUB block.  Vendor
+		 * always runs the hub (hub-en = 1); without it the AP UART3 is
+		 * not bridged to the connsys BT UART and no data flows.
+		 */
+		hub-en = <1>;
+		baudrate = <24000000>;
+		flavor-bin = "2g2a";
+		bk-rs-en = <1>;
+		uart-irq-en = <1>;
+		interrupts = <GIC_SPI 824 IRQ_TYPE_LEVEL_HIGH 0>;
+		pinctrl-names = "bt_combo_gpio_init",
+				"bt_combo_gpio_pre_on",
+				"bt_combo_uart_tx_aux",
+				"bt_combo_uart_rx_aux",
+				"bt_rst_on",
+				"bt_rst_off",
+				"bt-find-my-phone-high",
+				"bt-find-my-phone-low";
+		pinctrl-0 = <&bt_combo_gpio_init>;
+		pinctrl-1 = <&bt_combo_gpio_pre_on>;
+		pinctrl-2 = <&bt_combo_uart_tx_aux>;
+		pinctrl-3 = <&bt_combo_uart_rx_aux>;
+		pinctrl-4 = <&bt_rst_on>;
+		pinctrl-5 = <&bt_rst_off>;
+		pinctrl-6 = <&bt_find_my_phone_high>;
+		pinctrl-7 = <&bt_find_my_phone_low>;
+	};
+
+	/*
+	 * connsys SCP/DFD shared memory descriptor.  The BT driver reads the
+	 * DFD value region from here; the bootloader owns the actual carveout
+	 * so the addresses are left zero (feature disabled).
+	 */
+	connscp: connscp {
+		compatible = "mediatek,mt6991-conn_scp";
+		dfd-value-addr = <0>;
+		dfd-value-size = <0>;
+	};
+};
+
+&{/soc} {
+	uarthub: uarthub@16060000 {
+		compatible = "mediatek,mt6991-uarthub";
+		reg = <0 0x16060000 0 0x1000>;
+		interrupts = <GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&topckgen CLK_TOP_UARTHUB_BCLK>,
+			 <&topckgen CLK_TOP_UART>,
+			 <&topckgen CLK_TOP_ADSP_UARTHUB_B>,
+			 <&topckgen CLK_TOP_UNIVPLL_D6_D2>,
+			 <&topckgen CLK_TOP_UNIVPLL_D6_D4>,
+			 <&clk26m>;
+		clock-names = "clk_top_uarthub_bclk_sel",
+			      "clk_top_uart_sel",
+			      "clk_top_adsp_uarthub_bclk_sel",
+			      "clk_top_univpll_d6_d2_208m",
+			      "clk_top_univpll_d6_d4_104m",
+			      "clk_top_tck_26m_mx9";
+		baud-rate = <1>;
+		wakeup-mode = <1>;
+		status = "okay";
+	};
+
+	uart3: serial@16030000 {
+		compatible = "mediatek,mt6985-uart", "mediatek,mt6577-uart";
+		reg = <0 0x16030000 0 0x1000>;
+		interrupts = <GIC_SPI 314 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&clk208m>, <&pericfg_ao CLK_PERI_AO_UART3_BCLK>;
+		clock-names = "baud", "bus";
+		peri-clock-con = <0x16640020 0xf 0x8>;
+		peri-wakeup = <0x16640050 0x2 0x2 0x1>;
+		peri-wakeup-sta = <0x16640054>;
+		peri-reset = <0x16640000>;
+		peri-reset-set = <0x16640004 0x400000 0x400000>;
+		peri-reset-clr = <0x16640008 0x400000 0x400000>;
+		uart-line = <3>;
+		hub-baud = <24000000>;
+		wakeup-irq-support = <0>;
+		rtff-support = <1>;
+		status = "okay";
+
+		/* Mainline BlueZ path: MTK HCI over H4 (serdev) instead of the
+		 * Android bluedroid /dev/stpbt interface. */
+		bluetooth {
+			compatible = "mediatek,mt6653-bluetooth";
+			clocks = <&clk26m>;
+			clock-names = "ref";
+			pinctrl-names = "default", "pre-on", "uart-on";
+			pinctrl-0 = <&bt_combo_gpio_init>;
+			pinctrl-1 = <&bt_combo_gpio_pre_on>;
+			pinctrl-2 = <&bt_combo_uart_tx_aux>,
+				    <&bt_combo_uart_rx_aux>;
+			reset-gpios = <&pio 248 GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
+
+&pio {
+	bt_combo_gpio_init: bt-combo-gpio-init {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO237__FUNC_GPIO237>;
+			input-enable;
+			bias-pull-down;
+		};
+		pins-cmd2-dat {
+			pinmux = <PINMUX_GPIO238__FUNC_GPIO238>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+	bt_combo_gpio_pre_on: bt-combo-gpio-pre-on {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO237__FUNC_GPIO237>;
+			input-enable;
+			bias-pull-up;
+		};
+		pins-cmd2-dat {
+			pinmux = <PINMUX_GPIO238__FUNC_GPIO238>;
+			input-enable;
+			bias-pull-up;
+		};
+	};
+	bt_combo_uart_tx_aux: bt-combo-uart-tx-aux {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO237__FUNC_CONN_UARTHUB_UART_TX>;
+		};
+	};
+	bt_combo_uart_rx_aux: bt-combo-uart-rx-aux {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO238__FUNC_CONN_UARTHUB_UART_RX>;
+		};
+	};
+	bt_rst_on: bt-rst-on {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO248__FUNC_GPIO248>;
+			output-high;
+		};
+	};
+	bt_rst_off: bt-rst-off {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO248__FUNC_GPIO248>;
+			output-low;
+		};
+	};
+	bt_find_my_phone_high: bt-find-my-phone-high {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO244__FUNC_GPIO244>;
+			output-high;
+		};
+	};
+	bt_find_my_phone_low: bt-find-my-phone-low {
+		pins-cmd1-dat {
+			pinmux = <PINMUX_GPIO244__FUNC_GPIO244>;
+			output-low;
+		};
+	};
+};

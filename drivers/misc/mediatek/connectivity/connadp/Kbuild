@@ -1,0 +1,27 @@
+# Mainline out-of-tree build for the built-in connectivity adapter
+# (connectivity_build_in_adapter + wmt_build_in_adapter + power throttling),
+# taken from kernel_device_modules-6.6.
+
+ccflags-y += -Wno-missing-prototypes
+ccflags-y += -Wno-missing-declarations
+ccflags-y += -Wno-unused-function
+ccflags-y += -Wno-unused-variable
+
+ccflags-y += -I$(src)/common
+ccflags-y += -I$(src)/power_throttling
+ccflags-y += -I$(src)/../compat/include
+ccflags-y += -I$(src)/../connadp/common
+ccflags-y += -I$(srctree)/drivers/mmc/core
+ccflags-y += -I$(srctree)/
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat
+ccflags-y += -include $(src)/../compat/conninfra_compat.h
+
+obj-y += connadp.o
+connadp-objs := common/connectivity_build_in_adapter.o
+connadp-objs += common/wmt_build_in_adapter.o
+connadp-objs += power_throttling/adapter.o
+connadp-objs += power_throttling/core.o
+connadp-objs += common/mtk_compat.o
+# mtk_pcie_* are now provided in-kernel by the ported vendor PCIe host driver
+# (drivers/pci/controller/pcie-mediatek-gen3.c).

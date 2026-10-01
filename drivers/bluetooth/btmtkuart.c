@@ -30,6 +30,9 @@
 #include "hci_uart.h"
 #include "btmtk.h"
 
+/* connv3 power control for the MT6653 connsys BT (MTK connectivity module) */
+#include "../misc/mediatek/connectivity/conninfra/include/connv3.h"
+
 #define VERSION "0.2"
 
 #define MTK_STP_TLR_SIZE	2
@@ -40,6 +43,7 @@
 #define BTMTKUART_REQUIRED_WAKEUP	4
 
 #define BTMTKUART_FLAG_STANDALONE_HW	 BIT(0)
+#define BTMTKUART_FLAG_CONNAC3		 BIT(1)
 
 struct mtk_stp_hdr {
 	u8	prefix;
@@ -415,6 +419,35 @@ static int btmtkuart_open(struct hci_dev *hdev)
 	struct device *dev;
 	int err;
 
+	/* MT6653 lives in connsys: power it up before any UART I/O. */
+	if (bdev->data->flags & BTMTKUART_FLAG_CONNAC3) {
+		err = connv3_pwr_on(CONNV3_DRV_TYPE_BT);
+		if (err) {
+			bt_dev_err(hdev, "connv3_pwr_on failed (%d)", err);
+			return err;
+		}
+		err = connv3_pwr_on_done(CONNV3_DRV_TYPE_BT);
+		if (err) {
+			bt_dev_err(hdev, "connv3_pwr_on_done failed (%d)", err);
+			connv3_pwr_off(CONNV3_DRV_TYPE_BT);
+			return err;
+		}
+	}
+
+	/* Vendor sequence: apply the "pre-on" pin state (UART TX/RX as GPIO,
+	 * pull-up) *before* opening the port, so the UARTHUB bring-up runs
+	 * while the pins are still in GPIO mode. */
+	if (bdev->data->flags & BTMTKUART_FLAG_CONNAC3) {
+		struct pinctrl *pin = devm_pinctrl_get(&bdev->serdev->dev);
+		struct pinctrl_state *st;
+
+		if (!IS_ERR(pin)) {
+			st = pinctrl_lookup_state(pin, "pre-on");
+			if (!IS_ERR(st))
+				pinctrl_select_state(pin, st);
+		}
+	}
+
 	err = serdev_device_open(bdev->serdev);
 	if (err) {
 		bt_dev_err(hdev, "Unable to open UART device %s",
@@ -436,6 +469,39 @@ static int btmtkuart_open(struct hci_dev *hdev)
 			goto  err_serdev_close;
 		}
 
+		serdev_device_set_flow_control(bdev->serdev, false);
+	}
+
+	/* MT6653 ROM handshake runs at 115200.  The UARTHUB sequence has now
+	 * run (during serdev_device_open), so switch the pins to UART mode and
+	 * release the controller reset, matching the vendor pre-on order. */
+	if (bdev->data->flags & BTMTKUART_FLAG_CONNAC3) {
+		struct pinctrl *pin = devm_pinctrl_get(&bdev->serdev->dev);
+		struct pinctrl_state *st;
+		struct gpio_desc *rst;
+
+		if (!IS_ERR(pin)) {
+			st = pinctrl_lookup_state(pin, "uart-on");
+			if (!IS_ERR(st))
+				pinctrl_select_state(pin, st);
+		}
+
+		/* Release reset (vendor drives RST high); pulse first. */
+		rst = devm_gpiod_get_optional(&bdev->serdev->dev, "reset",
+					      GPIOD_OUT_LOW);
+		if (!IS_ERR(rst) && rst) {
+			gpiod_set_value_cansleep(rst, 0);
+			msleep(10);
+			gpiod_set_value_cansleep(rst, 1);
+			msleep(20);
+		}
+
+		err = serdev_device_set_baudrate(bdev->serdev, 115200);
+		if (err < 0) {
+			bt_dev_err(hdev, "Unable to set baudrate UART device %s",
+				   dev_name(&bdev->serdev->dev));
+			goto err_serdev_close;
+		}
 		serdev_device_set_flow_control(bdev->serdev, false);
 	}
 
@@ -477,6 +543,9 @@ static int btmtkuart_close(struct hci_dev *hdev)
 	pm_runtime_disable(dev);
 
 	serdev_device_close(bdev->serdev);
+
+	if (bdev->data->flags & BTMTKUART_FLAG_CONNAC3)
+		connv3_pwr_off(CONNV3_DRV_TYPE_BT);
 
 	return 0;
 }
@@ -586,6 +655,67 @@ static int btmtkuart_change_baudrate(struct hci_dev *hdev)
 	return 0;
 }
 
+static int btmtkuart_connac3_handshake(struct hci_dev *hdev)
+{
+	struct btmtkuart_dev *bdev = hci_get_drvdata(hdev);
+	struct btmtk_hci_wmt_params wmt_params;
+	/* set-uart payload: baud 24000000 (LE) + trailing config byte */
+	u8 set_uart[6] = { 0x00, 0x36, 0x6e, 0x01, 0x00, 0x03 };
+	int err;
+
+	/*
+	 * MT6653 (CONNAC3) ROM handshake, mirroring the vendor bt/linux_v2
+	 * driver: it does not answer the generic WMT semaphore query, it uses
+	 * op=0x04 sub-queries instead.
+	 */
+
+	/* query uart */
+	wmt_params.op = 0x04;
+	wmt_params.flag = 0x02;
+	wmt_params.dlen = 0;
+	wmt_params.data = NULL;
+	wmt_params.status = NULL;
+
+	err = mtk_hci_wmt_sync(hdev, &wmt_params);
+	if (err < 0) {
+		bt_dev_err(hdev, "query uart failed (%d)", err);
+		return err;
+	}
+	bt_dev_info(hdev, "query uart done");
+
+	/* read chip id */
+	wmt_params.flag = 0x09;
+	err = mtk_hci_wmt_sync(hdev, &wmt_params);
+	if (err < 0) {
+		bt_dev_err(hdev, "read chip id failed (%d)", err);
+		return err;
+	}
+	bt_dev_info(hdev, "read chip id done");
+
+	/* configure the controller-side UART to 24M */
+	wmt_params.flag = 0x01;
+	wmt_params.dlen = sizeof(set_uart);
+	wmt_params.data = set_uart;
+	err = mtk_hci_wmt_sync(hdev, &wmt_params);
+	if (err < 0) {
+		bt_dev_err(hdev, "set uart failed (%d)", err);
+		return err;
+	}
+
+	/* download firmware at 24M */
+	serdev_device_set_baudrate(bdev->serdev, 24000000);
+
+	err = btmtk_setup_firmware_79xx(hdev, bdev->data->fwname,
+					mtk_hci_wmt_sync, 0x6653);
+	if (err < 0) {
+		bt_dev_err(hdev, "firmware download failed (%d)", err);
+		return err;
+	}
+	bt_dev_info(hdev, "firmware downloaded");
+
+	return 0;
+}
+
 static int btmtkuart_setup(struct hci_dev *hdev)
 {
 	struct btmtkuart_dev *bdev = hci_get_drvdata(hdev);
@@ -621,6 +751,13 @@ static int btmtkuart_setup(struct hci_dev *hdev)
 	if (btmtkuart_is_standalone(bdev))
 		btmtkuart_change_baudrate(hdev);
 
+	if (bdev->data->flags & BTMTKUART_FLAG_CONNAC3) {
+		err = btmtkuart_connac3_handshake(hdev);
+		if (err < 0)
+			return err;
+		goto ignore_setup_fw;
+	}
+
 	/* Query whether the firmware is already download */
 	wmt_params.op = BTMTK_WMT_SEMAPHORE;
 	wmt_params.flag = 1;
@@ -640,7 +777,8 @@ static int btmtkuart_setup(struct hci_dev *hdev)
 	}
 
 	/* Setup a firmware which the device definitely requires */
-	err = btmtk_setup_firmware(hdev, bdev->data->fwname, mtk_hci_wmt_sync);
+	err = btmtk_setup_firmware(hdev, bdev->data->fwname,
+				   mtk_hci_wmt_sync);
 	if (err < 0)
 		return err;
 
@@ -970,11 +1108,18 @@ static const struct btmtkuart_data mt7668_data __maybe_unused = {
 	.fwname = FIRMWARE_MT7668,
 };
 
+/* MT6653 / MT6991 connsys BT (CONNAC3, UART behind UARTHUB) */
+static const struct btmtkuart_data mt6653_data __maybe_unused = {
+	.flags = BTMTKUART_FLAG_CONNAC3,
+	.fwname = FIRMWARE_MT6653,
+};
+
 #ifdef CONFIG_OF
 static const struct of_device_id mtk_of_match_table[] = {
 	{ .compatible = "mediatek,mt7622-bluetooth", .data = &mt7622_data},
 	{ .compatible = "mediatek,mt7663u-bluetooth", .data = &mt7663_data},
 	{ .compatible = "mediatek,mt7668u-bluetooth", .data = &mt7668_data},
+	{ .compatible = "mediatek,mt6653-bluetooth", .data = &mt6653_data},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, mtk_of_match_table);

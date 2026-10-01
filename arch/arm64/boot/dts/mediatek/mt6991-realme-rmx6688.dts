@@ -14,6 +14,11 @@
 
 #include "mt6991.dtsi"
 #include <dt-bindings/pinctrl/mt6991-pinfunc.h>
+#include "mt6991-realme-rmx6688-connectivity.dtsi"
+#include "mt6991-realme-rmx6688-pcie.dtsi"
+#include "mt6991-realme-connfem-fem.dtsi"
+#include "mt6991-realme-connfem-sku.dtsi"
+#include "mt6991-realme-rmx6688-bt.dtsi"
 
 / {
 	model = "realme GT7 (RMX6688)";

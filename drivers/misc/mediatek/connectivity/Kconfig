@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0
+config MTK_COMBO
+	bool "MediaTek MT6991 connectivity stack (conninfra/wlan/connfem)"
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	help
+	  Build the MediaTek MT6991 connectivity stack (conninfra, connfem and
+	  the gen4m Wi-Fi driver) into the kernel for the realme GT7 port.
+
+config MTK_COMBO_CHIP_CONSYS_6991
+	bool "MT6991 CONNSYS platform support"
+	depends on MTK_COMBO
+	default y

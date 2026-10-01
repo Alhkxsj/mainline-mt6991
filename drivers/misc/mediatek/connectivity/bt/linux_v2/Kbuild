@@ -1,0 +1,81 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Built-in (obj-y) Kbuild for the downstream MT6991 / MT6653 Bluetooth
+# driver, taken verbatim from the vendor connectivity stack and wired for
+# the mainline kernel.  Mirrors the vendor linux_v2/Makefile configuration:
+#   MTK_CHIP_IF      = uart_tty
+#   MTK_PROJ_TYPE    = sp            (connv3 power control)
+#   USE_DEVICE_NODE  = 1             (Android / char-device model)
+
+ccflags-y += -Wno-missing-prototypes
+ccflags-y += -Wno-missing-declarations
+ccflags-y += -Wno-unused-function
+ccflags-y += -Wno-unused-variable
+ccflags-y += -Wno-unused-but-set-variable
+ccflags-y += -Wno-error
+
+ccflags-y += -I$(src)
+ccflags-y += -I$(src)/include
+ccflags-y += -I$(src)/include/chip
+ccflags-y += -I$(src)/include/uart/tty
+ccflags-y += -I$(src)/proj/include
+ccflags-y += -I$(src)/../../compat/include
+ccflags-y += -I$(src)/../../connadp/power_throttling
+ccflags-y += -I$(src)/../../connadp/common
+ccflags-y += -I$(src)/../../conninfra/include
+ccflags-y += -I$(src)/../../conninfra/conn_drv/connv3/debug_utility
+ccflags-y += -I$(src)/../../conninfra/conn_drv/connv3/debug_utility/include
+ccflags-y += -I$(src)/../../conninfra/conn_drv/connv3/debug_utility/connsyslog
+ccflags-y += -I$(src)/../../conninfra/conn_drv/connv3/debug_utility/coredump
+ccflags-y += -I$(src)/../../connfem/include
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
+ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat
+ccflags-y += -I$(srctree)/drivers/bluetooth
+ccflags-y += -I$(srctree)/include
+
+ccflags-y += -include $(src)/../../compat/conninfra_compat.h
+
+# Chip interface / project type
+ccflags-y += -DCHIP_IF_UART_TTY
+ccflags-y += -DUSE_DEVICE_NODE=1
+ccflags-y += -DANDROID_OS
+ccflags-y += -DBTMTK_PLAT_ALPS=1
+
+# Feature switches (vendor linux_v2/Makefile, SP + uart_tty branch)
+ccflags-y += -DCFG_SUPPORT_BT_DL_WIFI_PATCH=1
+ccflags-y += -DCFG_SUPPORT_BT_DL_ZB_PATCH=0
+ccflags-y += -DCFG_SUPPORT_BLUEZ=0
+ccflags-y += -DCFG_SUPPORT_DVT=0
+ccflags-y += -DCFG_SUPPORT_HW_DVT=0
+ccflags-y += -DCFG_SUPPORT_MULTI_DEV_NODE=0
+ccflags-y += -DCFG_SUPPORT_WAKEUP_IRQ=1
+ccflags-y += -DCFG_UART_WAKEUP_SUPPORT
+ccflags-y += -DCFG_INBAND_SUPPORT
+ccflags-y += -DCFG_MTK_BT_DFD_DUMP_SUPPORT=1
+ccflags-y += -DCFG_GKI_SUPPORT=0
+ccflags-y += -DBUILD_QA_DBG=0
+ccflags-y += -DSTPBTFWLOG_ENABLE=1
+ccflags-y += -DDEBUG_DUMP_TIME
+ccflags-y += -DBTMTK_ISOC_TEST=0
+ccflags-y += -DBTMTK_LOG_LVL=0
+ccflags-y += -D_FORTIFY_SOURCE=2
+
+obj-y += btmtk_bt.o
+btmtk_bt-objs := \
+	btmtk_main.o \
+	btmtk_fw_log.o \
+	btmtk_buffer_mode.o \
+	btmtk_woble.o \
+	btmtk_chip_reset.o \
+	btmtk_queue.o \
+	btmtk_char_dev.o \
+	uart/btmtktty.o \
+	proj/btmtk_proj_sp.o \
+	proj/btmtk_proj_sp_debug.o \
+	chip/btmtk_chip_common.o \
+	chip/btmtk_chip_66xx.o \
+	chip/btmtk_chip_6639.o \
+	chip/btmtk_chip_7902.o \
+	chip/btmtk_chip_7922.o \
+	chip/btmtk_chip_7961.o \
+	chip/btmtk_chip_connac3.o

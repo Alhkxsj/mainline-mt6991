@@ -267,3 +267,30 @@ CONFIG_MTK_SOC_THERMAL_LVTS=y
 CONFIG_NVMEM=y
 CONFIG_NVMEM_MTK_DEVINFO=y
 CONFIG_RESET_TI_SYSCON=y
+
+# --- Connectivity: MT6991 connv3 / MT6653 2g2a WiFi stack (built-in) -------
+# Full Android port of conninfra + connadp + connfem + gen4m wlan (PCIe HIF).
+CONFIG_MTK_COMBO=y
+CONFIG_MTK_COMBO_CHIP_CONSYS_6991=y
+# cfg80211/rfkill must be built-in so the built-in gen4m driver links.
+CONFIG_CFG80211=y
+CONFIG_RFKILL=y
+
+# --- PCIe: MT6991 host + PHY (vendor full port) ---------------------------
+# Needed to enumerate the MT6653 Wi-Fi endpoint on PCIe.
+CONFIG_PCIE_MEDIATEK_GEN3=y
+CONFIG_PHY_MTK_PCIE=y
+
+# --- Bluetooth: MT6991 connv3 / MT6653 2g2a (built-in) --------------------
+# Mainline BlueZ path: BT core + HCI UART(serdev/H4) + MTK transport.
+# The vendor bt/linux_v2 (Android/bluedroid) port is disabled; MT6653/MT6991
+# support lives in the mainline btmtk.c/btmtkuart.c.  BT_HCIUART must be =y
+# (tristate dependency) so btmtkuart can be built-in, bound via the uart3
+# serdev child node.
+CONFIG_BT=y
+CONFIG_BT_BREDR=y
+# The BT UART is routed through the UARTHUB block (board DTS starts the BT
+# controller with hub-en = 1).
+CONFIG_MTK_UARTHUB=y
+CONFIG_BT_HCIUART=y
+CONFIG_BT_MTKUART=y

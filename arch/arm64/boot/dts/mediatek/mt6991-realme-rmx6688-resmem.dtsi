@@ -36,25 +36,25 @@
 		no-map;
 	};
 
-	mblock-50-shared-dma-pool_wifi-reserve-memory_dma@ee6a0000 {
+	wifi_dma_pool: mblock-50-shared-dma-pool_wifi-reserve-memory_dma@ee6a0000 {
 		compatible = "shared-dma-pool";
 		reg = <0x0 0xee6a0000 0x0 0x01900000>;
 		no-map;
 	};
 
-	mblock-49-shared-dma-pool_wifi-misc-reserve-memory_dma@ee600000 {
+	wifi_misc_pool: mblock-49-shared-dma-pool_wifi-misc-reserve-memory_dma@ee600000 {
 		compatible = "shared-dma-pool";
 		reg = <0x0 0xee600000 0x0 0x000a0000>;
 		no-map;
 	};
 
-	mblock-48-consys_emi@edc00000 {
+	consys_emi: mblock-48-consys_emi@edc00000 {
 		compatible = "mediatek,consys_emi";
 		reg = <0x0 0xedc00000 0x0 0x00a00000>;
 		no-map;
 	};
 
-	mblock-47-consys_wifi_emi@ed000000 {
+	consys_wifi_emi: mblock-47-consys_wifi_emi@ed000000 {
 		compatible = "mediatek,consys_wifi_emi";
 		reg = <0x0 0xed000000 0x0 0x00c00000>;
 		no-map;

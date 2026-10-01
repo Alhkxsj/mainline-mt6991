@@ -116,6 +116,10 @@ void btmtk_fw_get_filename(char *buf, size_t size, u32 dev_id, u32 fw_ver,
 		snprintf(buf, size,
 			 "mediatek/mt7927/BT_RAM_CODE_MT%04x_2_%x_hdr.bin",
 			 dev_id & 0xffff, (fw_ver & 0xff) + 1);
+	else if (dev_id == 0x6653)
+		snprintf(buf, size,
+			 "mediatek/BT_RAM_CODE_MT%04x_2g2a_1_hdr.bin",
+			 dev_id & 0xffff);
 	else if (dev_id == 0x7925)
 		snprintf(buf, size,
 			 "mediatek/mt%04x/BT_RAM_CODE_MT%04x_1_%x_hdr.bin",

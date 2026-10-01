@@ -1,0 +1,25 @@
+################################
+## Add specified modules here ##
+################################
+$(info MODULE_NAME $(MODULE_NAME))
+$(info Segment: $(SEGMENT))
+
+KO_CODE_PATH := $(src)
+ifeq ($(SEGMENT), SP)
+    # build ko by connac version
+    include $(KO_CODE_PATH)/Kbuild.$(subst wlan_drv_gen4m_,,$(MODULE_NAME))
+else
+    include $(KO_CODE_PATH)/Kbuild.main
+endif
+
+# Mainline port: point at the local connectivity root (adapter + compat shims).
+CONNECTIVITY_ROOT := $(abspath $(KO_CODE_PATH)/../../..)
+ccflags-y += -I$(CONNECTIVITY_ROOT)/connadp/common
+ccflags-y += -I$(CONNECTIVITY_ROOT)/connadp/power_throttling
+ccflags-y += -I$(CONNECTIVITY_ROOT)/compat/include
+ccflags-y += -include $(CONNECTIVITY_ROOT)/compat/conninfra_compat.h
+ccflags-y += -include $(CONNECTIVITY_ROOT)/compat/include/wlan_crypto_compat.h
+ccflags-y += -Wno-missing-prototypes -Wno-missing-declarations
+ccflags-y += -Wno-unused-function -Wno-unused-variable
+# Vendor driver: do not fail the build on warnings.
+ccflags-y += -Wno-error

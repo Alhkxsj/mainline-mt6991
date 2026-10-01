@@ -1,0 +1,146 @@
+// SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+/*
+ * realme GT7 (RMX6688) PCIe (MT6991) nodes.
+ *
+ * MT6991 reuses the mt8196 PExtP clock/reset registers (verified identical:
+ * set 0x18 / clr 0x1c / sta 0x14, reset at 0x8/0xc), so the mainline
+ * mt8196-pextp clock+reset driver is used.  The MT6653 Wi-Fi endpoint sits on
+ * PCIe domain 0 (pcie@16910000).
+ */
+#include <dt-bindings/reset/ti-syscon.h>
+#include <dt-bindings/clock/mediatek,mt8196-clock.h>
+#include <dt-bindings/reset/mediatek,mt8196-resets.h>
+
+&{/soc} {
+	pextp0cfg_ao_clk: syscon@169b0000 {
+		compatible = "mediatek,mt8196-pextp0cfg-ao", "syscon",
+			     "simple-mfd";
+		reg = <0 0x169b0000 0 0x1000>;
+		#clock-cells = <1>;
+
+		pextp0ao_rst: reset-controller {
+			compatible = "ti,syscon-reset";
+			#reset-cells = <1>;
+
+			ti,reset-bits = <
+				/* 0: PCIe0 MAC reset */
+				0x8 0 0xc 0 0 0
+				(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+				/* 1: PCIe0 PHY reset */
+				0x8 1 0xc 1 0 0
+				(ASSERT_SET | DEASSERT_SET | STATUS_NONE)
+				>;
+		};
+	};
+
+	srclken_rc: syscon@1c011000 {
+		compatible = "mediatek,srclken-rc", "syscon";
+		reg = <0 0x1c011000 0 0x100>;
+	};
+
+	pciephy0: phy@16900000 {
+		compatible = "mediatek,mt6991-pcie-phy";
+		#phy-cells = <0>;
+		reg = <0 0x16900000 0 0x10000>,
+		      <0 0x16920000 0 0x10000>;
+		reg-names = "sif", "ckm";
+		num-lanes = <1>;
+		clocks = <&pextp0cfg_ao_clk CLK_PEXT_PEXTP_PHY_P0_PEXTP_REF>,
+			 <&pextp0cfg_ao_clk CLK_PEXT_PEXTP_PHY_P0_MCU_BUS>;
+		status = "okay";
+	};
+
+	pcie0: pcie@16910000 {
+		device_type = "pci";
+		compatible = "mediatek,mt6991-pcie";
+		reg = <0 0x16910000 0 0x4000>;
+		reg-names = "pcie-mac";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		interrupts = <GIC_SPI 337 IRQ_TYPE_LEVEL_HIGH 0>;
+		bus-range = <0x00 0xff>;
+		ranges = <0x82000000 0 0x50000000 0x0 0x50000000 0 0x8000000>;
+		linux,pci-domain = <0>;
+		mediatek,peri-reset-dis;
+		mediatek,dvfs-req-dis;
+		mediatek,suspend-mode-l12;
+		pextpcfg = <&pextp0cfg_ao_clk>;
+		pmrc = <&srclken_rc>;
+		clocks = <&pextp0cfg_ao_clk CLK_PEXT_PEXTP_MAC_P0_REF>,
+			 <&pextp0cfg_ao_clk CLK_PEXT_PEXTP_MAC_P0_PL_P>,
+			 <&pextp0cfg_ao_clk CLK_PEXT_PEXTP_MAC_P0_TL>,
+			 <&pextp0cfg_ao_clk CLK_PEXT_PEXTP_MAC_P0_AXI_250>,
+			 <&pextp0cfg_ao_clk CLK_PEXT_PEXTP_MAC_P0_AHB_APB>,
+			 <&pextp0cfg_ao_clk CLK_PEXT_PEXTP_VLP_AO_P0_LP>;
+		resets = <&pextp0ao_rst MT8196_PEXTP0_RST0_PCIE0_MAC>,
+			 <&pextp0ao_rst MT8196_PEXTP0_RST0_PCIE0_PHY>;
+		reset-names = "mac", "phy";
+		phys = <&pciephy0>;
+		phy-names = "pcie-phy";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 7>;
+		interrupt-map = <0 0 0 1 &pcie_intc0 0>,
+				<0 0 0 2 &pcie_intc0 1>,
+				<0 0 0 3 &pcie_intc0 2>,
+				<0 0 0 4 &pcie_intc0 3>;
+		pinctrl-names = "init", "default", "sleep", "pd";
+		pinctrl-0 = <&pcie0_init>;
+		pinctrl-1 = <&pcie0_default>;
+		pinctrl-2 = <&pcie0_sleep>;
+		pinctrl-3 = <&pcie0_pd>;
+		max-link-speed = <4>;
+		status = "okay";
+
+		pcie_intc0: interrupt-controller {
+			interrupt-controller;
+			#address-cells = <0>;
+			#interrupt-cells = <1>;
+		};
+	};
+};
+
+&pio {
+	pcie0_init: pcie0-init {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO241__FUNC_GPIO241>;
+			output-low;
+		};
+		pins-cmd-dat1 {
+			pinmux = <PINMUX_GPIO243__FUNC_GPIO243>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	pcie0_default: pcie0-default {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO241__FUNC_PCIE_PERSTN>,
+				 <PINMUX_GPIO243__FUNC_PCIE_CLKREQN>;
+			bias-pull-up;
+		};
+	};
+
+	pcie0_sleep: pcie0-sleep {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO241__FUNC_GPIO241>;
+			output-low;
+		};
+		pins-cmd-dat1 {
+			pinmux = <PINMUX_GPIO243__FUNC_GPIO243>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	pcie0_pd: pcie0-pd {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO241__FUNC_GPIO241>;
+			output-low;
+		};
+		pins-cmd-dat1 {
+			pinmux = <PINMUX_GPIO243__FUNC_GPIO243>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+};
