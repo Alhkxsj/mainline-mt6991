@@ -644,6 +644,20 @@ static const struct pmif_data mt8196_pmif_arb = {
 	.num_spmi_buses = 2,
 };
 
+/*
+ * MT6991: same two-bus PMIF register layout, but the RCS "rcs" interrupt from
+ * the mt8196 layout is not cleanly clearable here (the chained handler storms
+ * and RCU-stalls the system), so run the controller without interrupts
+ * (spmi_ver < 2).  The MT6379 charger driver polls instead of using IRQs.
+ */
+static const struct pmif_data mt6991_pmif_arb = {
+	.regs = mt8195_regs,
+	.spmimst_regs = mt8195_spmi_regs,
+	.soc_chan = 2,
+	.spmi_ver = 1,
+	.num_spmi_buses = 2,
+};
+
 static int mtk_spmi_irq_init(struct device_node *node,
 			     const struct pmif_data *pdata,
 			     struct pmif_bus *pbus)
@@ -841,6 +855,9 @@ static const struct of_device_id mtk_spmi_match_table[] = {
 	}, {
 		.compatible = "mediatek,mt8195-spmi",
 		.data = &mt8195_pmif_arb,
+	}, {
+		.compatible = "mediatek,mt6991-spmi",
+		.data = &mt6991_pmif_arb,
 	}, {
 		.compatible = "mediatek,mt8196-spmi",
 		.data = &mt8196_pmif_arb,

@@ -18,7 +18,8 @@ aarch64)完成,无交叉工具链。历史/约束见文末。
 | USB-C Gadget | CDC-ACM (g_serial);修 `VBUS_FRC_EN`、xsphy vendor 序列、NXP repeater 驱动 |
 | WiFi | MT6653 (connv3, PCIe HIF):扫描/认证/关联/WPA2 四次握手/联网全部正常;conninfra+connadp+connfem+gen4m+PCIe 全量内建 |
 | Connectivity 电源栈 | connv3/conninfra、connfem(FEM)、NVRAM 加载、自动上电 |
-| 电池电量计 | TI bq27541 @ i2c0 0x55;`/sys/class/power_supply/` 暴露容量/电压/电流/温度,GNOME 显示电量。**只读** |
+| 电池电量计 | TI bq27541 @ i2c0 0x55;`/sys/class/power_supply/` 暴露容量/电压/电流/温度,GNOME 显示电量。只读 |
+| 充电 (5V 标准) | MT6379(SPMI USID 0x0e):内核驱动(SPMI 控制器 + `mt6379_charger`)把 `AICR`/`ICHG` 提到 3A 并每 3s 轮询重设(抗拔插)。实测 `Charging` ~2.6A;**厂商快充(VOOC)未做** |
 | 热管理 (LVTS) | 31 传感器(25 有效);LVTS 硬件热复位保护,不做软件降频 |
 | 桌面系统 | Ubuntu 24.04 + GNOME/mutter 稳定运行 |
 | 日志通道 | pstore/ramoops 可保存 panic 前日志 |
@@ -30,10 +31,10 @@ aarch64)完成,无交叉工具链。历史/约束见文末。
 | 蓝牙 (MT6653) | 正在从厂商 `bt/linux_v2` 改走**主线 BlueZ(`btmtk`/`btmtkuart`, serdev+H4+STP)**:驱动绑定、`hci0` 注册、connv3 电源、MT6653 握手代码均已实现;但 BT UART 经 **UARTHUB**,AP 第一帧始终无回应(`query uart failed -110`)。引脚复用/复位/uarthub 放行序列厂商 pre_on 顺序均已试过,疑点转向 uarthub 数据面与 connv3 上电竞争 |
 | 传感器 | 缺厂商总线/地址/上电/初始化固件信息(BMI2xy/AK09918/TCS3720),厂商架构依赖 SCP sensorhub |
 | 系统 suspend/resume | 电源域下电会丢 bootloader 状态(MIPI TX PHY、blender 链、SMMU、唤醒源均未自包含) |
-| 充电控制 (MT6379) | 电量计可读;充电需补 charger 驱动 |
+| 快充 VOOC/SuperVOOC | 需电荷泵 `mt6379_2p`(i2c3 0x53)+专有协议+OPPO 框架;当前仅 5V 标准充电 |
 | GPS / FM | 需编译 `gps/` + 补 DTS/EMI 节点 |
 | 冷启动无 LK 显示 | 依赖 bootloader 显示的中间级(PHY/mutex/blender)尚未由主线完整接管 |
-| 10-bit / HDR scanout | 当前只有 8-bit 管线 |
+| 10-bit / HDR scanout | 已试,不可行:厂商 OVL 只支持 ABGR/XBGR2101010,GNOME/mutter 只用 XRGB2101010(厂商未实现),且下游是 bootloader 的 8-bit |
 | MT6373/MT6363 PMIC 驱动 | 主线上电走 raw SPMI/寄存器 hack(触摸 AVDD、USB repeater 等由 init 处理) |
 
 ## 布局

@@ -294,3 +294,12 @@ CONFIG_BT_BREDR=y
 CONFIG_MTK_UARTHUB=y
 CONFIG_BT_HCIUART=y
 CONFIG_BT_MTKUART=y
+
+# --- SPMI + MT6379 charger (5V standard charging) -------------------------
+# The MT6379 is an SPMI PMIC (USID 0x0e); build the PMIF controller and the
+# minimal charger driver in so it re-asserts the input current limit on every
+# (re)plug (the bootloader leaves AICR at 500 mA).
+CONFIG_SPMI=y
+CONFIG_SPMI_MTK_PMIF=y
+CONFIG_REGMAP_SPMI=y
+CONFIG_CHARGER_MT6379=y

@@ -731,6 +731,17 @@ config CHARGER_MT6370
 	  This driver can also be built as a module. If so, the module
 	  will be called "mt6370-charger".
 
+config CHARGER_MT6379
+	tristate "MediaTek MT6379 charger driver"
+	depends on SPMI
+	select REGMAP_SPMI
+	help
+	  Minimal charger driver for the MediaTek MT6379 SPMI PMIC used on the
+	  realme GT7 (MT6991).  It raises the input current limit (the
+	  bootloader leaves it at the 500 mA USB-SDP default) and re-asserts it
+	  whenever the charger is (re)plugged, exposing VBUS presence and charge
+	  state through the power_supply class.
+
 config CHARGER_QCOM_SMBB
 	tristate "Qualcomm Switch-Mode Battery Charger and Boost"
 	depends on MFD_SPMI_PMIC || COMPILE_TEST

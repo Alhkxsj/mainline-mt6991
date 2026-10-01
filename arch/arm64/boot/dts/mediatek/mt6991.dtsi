@@ -22,12 +22,18 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/phy/phy.h>
 #include <dt-bindings/reset/mediatek,mt8196-resets.h>
+#include <dt-bindings/spmi/spmi.h>
 
 / {
 	compatible = "mediatek,mt6991";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
+
+	aliases {
+		spmi0 = &spmi0;
+		spmi1 = &spmi1;
+	};
 
 	/*
 	 * UART0 keeps a fixed 26 MHz parent on purpose: the real baud clock
@@ -291,6 +297,72 @@
 			reg = <0 0x168a0000 0 0x1000>;
 			#clock-cells = <1>;
 			#reset-cells = <1>;
+		};
+
+		/*
+		 * SPMI (PMIF) controller + the MT6379 PMIC/charger.
+		 *
+		 * The PMIF clocks are already running (the bootloader leaves them
+		 * on and the initramfs talks raw SPMI to the eUSB2 repeater), so
+		 * they are modelled as fixed-clocks to satisfy the driver.
+		 */
+		pmif_sys: pmif-sys-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <26000000>;
+			#clock-cells = <0>;
+		};
+
+		pmif_tmr: pmif-tmr-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <32768>;
+			#clock-cells = <0>;
+		};
+
+		spmi_mst: spmi-mst-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <26000000>;
+			#clock-cells = <0>;
+		};
+
+		spmi: spmi@1c018000 {
+			compatible = "mediatek,mt6991-spmi", "mediatek,mt8196-spmi";
+			ranges = <0 0 0x1c018000 0x4900>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			status = "okay";
+
+			spmi0: spmi@0 {
+				reg = <0 0x900>, <0x4800 0x100>;
+				reg-names = "pmif", "spmimst";
+				clocks = <&pmif_sys>, <&pmif_tmr>, <&spmi_mst>;
+				clock-names = "pmif_sys_ck", "pmif_tmr_ck", "spmimst_clk_mux";
+				interrupts-extended = <&pio 292 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "rcs";
+				interrupt-controller;
+				#interrupt-cells = <3>;
+				#address-cells = <2>;
+				#size-cells = <0>;
+			};
+
+			spmi1: spmi@2000 {
+				reg = <0x2000 0x900>, <0x4000 0x100>;
+				reg-names = "pmif", "spmimst";
+				clocks = <&pmif_sys>, <&pmif_tmr>, <&spmi_mst>;
+				clock-names = "pmif_sys_ck", "pmif_tmr_ck", "spmimst_clk_mux";
+				interrupts-extended = <&pio 291 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "rcs";
+				interrupt-controller;
+				#interrupt-cells = <3>;
+				#address-cells = <2>;
+				#size-cells = <0>;
+
+				mt6379: pmic@e {
+					compatible = "mediatek,mt6379";
+					reg = <0xe SPMI_USID>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+				};
+			};
 		};
 
 		/*
