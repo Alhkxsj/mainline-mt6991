@@ -11943,7 +11943,7 @@ static uint32_t kalPerMonUpdate(struct ADAPTER *prAdapter)
 	TX_FREE_SKBQ_TEMPLATE \
 	"\n"
 
-	DBGLOG(SW4, INFO, TEMP_LOG_TEMPLATE,
+	DBGLOG(SW4, LOUD, TEMP_LOG_TEMPLATE,
 		period,	(unsigned long long) perf->ulThroughput,
 		(unsigned long long) (perf->ulThroughput >> 20),
 		(unsigned long long) ((perf->ulThroughput >> 10) & BITS(0, 9)),
@@ -12121,7 +12121,7 @@ static uint32_t kalPerMonUpdate(struct ADAPTER *prAdapter)
 	"%lu,%lu,%lu,%lu,%lu|%lu,%lu,%lu,%lu,%lu^" \
 	"%lu,%lu,%lu,%lu,%lu|%lu,%lu,%lu,%lu\n" \
 
-	DBGLOG(SW4, INFO, TEMP_LOG_TEMPLATE,
+	DBGLOG(SW4, LOUD, TEMP_LOG_TEMPLATE,
 		head3,
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_INTR_COUNT),
 		RX_GET_CNT(&prAdapter->rRxCtrl, RX_TASKLET_COUNT),

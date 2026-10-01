@@ -8023,7 +8023,7 @@ void qmHandleEventBssAbsencePresence(struct ADAPTER *prAdapter,
 #endif
 	}
 
-	DBGLOG(QM, INFO, "NAF:B=%d,A=%d,F=%d,P=%u\n",
+	DBGLOG(QM, LOUD, "NAF:B=%d,A=%d,F=%d,P=%u\n",
 		prEventBssStatus->ucBssIndex, prBssInfo->fgIsNetAbsent,
 		prBssInfo->ucBssFreeQuota, prBssInfo->u4PresentTime);
 

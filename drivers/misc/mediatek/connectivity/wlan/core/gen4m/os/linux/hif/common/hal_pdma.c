@@ -746,7 +746,7 @@ done:
 		HAL_RMCR_RD(NOMMIO_DBG, prAdapter, 0x7403002C, &u4Val1);
 		HAL_RMCR_RD(NOMMIO_DBG, prAdapter, 0x74031118, &u4Val2);
 		HAL_RMCR_RD(NOMMIO_DBG, prAdapter, 0x74031090, &u4Val3);
-		DBGLOG(HAL, INFO,
+		DBGLOG(HAL, LOUD,
 			"PCIe debug, 0x74030168 = 0x88CC0100, 0x74030164 = 0x4A474845, 0x7403002C = 0x%x, 0x74031118 = 0x%x, 0x74031090 = 0x%x\n",
 			u4Val1, u4Val2, u4Val3);
 
@@ -985,7 +985,7 @@ void halSetFWOwnImpl(struct ADAPTER *prAdapter,
 			DBGLOG(INIT, TRACE, "FW OWN:%u, IntSta:0x%08x\n",
 			fgResult, prHifInfo->u4WakeupIntSta);
 		else
-			DBGLOG(INIT, INFO, "FW OWN:%u, IntSta:0x%08x\n",
+			DBGLOG(INIT, LOUD, "FW OWN:%u, IntSta:0x%08x\n",
 			fgResult, prHifInfo->u4WakeupIntSta);
 		prHifInfo->u4WakeupIntSta = 0;
 	}
@@ -6656,7 +6656,7 @@ static void halDumpMsduReportStats(struct ADAPTER *prAdapter)
 	pos += kalSnprintf(buf + pos, u4BufferSize - pos, "Txfail:%u",
 			report->u4TxFail);
 
-	DBGLOG(HAL, INFO, "%s", buf);
+	DBGLOG(HAL, LOUD, "%s", buf);
 	kalMemFree(buf, VIR_MEM_TYPE, u4BufferSize);
 #endif
 }
@@ -7118,7 +7118,7 @@ void halDumpHifStats(struct ADAPTER *prAdapter)
 		GLUE_GET_REF_CNT(prHifInfo->rNapiDev.u4DrvOwnCnt));
 #endif /* CFG_SUPPORT_HIF_RX_NAPI */
 
-	DBGLOG(HAL, INFO, "%s\n", buf);
+	DBGLOG(HAL, LOUD, "%s\n", buf);
 	kalMemFree(buf, VIR_MEM_TYPE, u4BufferSize);
 
 #if (CFG_WFD_SCC_BALANCE_SUPPORT == 1)

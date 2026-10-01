@@ -2063,14 +2063,14 @@ void mt6653_dumpWfsyscpupcrViaBT(struct ADAPTER *ad)
 			    var_lp);
 	}
 
-	DBGLOG(HAL, INFO, "wm pc=%s%s%s%s%s\n",
+	DBGLOG(HAL, LOUD, "wm pc=%s%s%s%s%s\n",
 		log_buf_pc[0],
 		log_buf_pc[1],
 		log_buf_pc[2],
 		log_buf_pc[3],
 		log_buf_pc[4]);
 
-	DBGLOG(HAL, INFO, "wm lp=%s%s%s%s%s\n",
+	DBGLOG(HAL, LOUD, "wm lp=%s%s%s%s%s\n",
 		log_buf_lp[0],
 		log_buf_lp[1],
 		log_buf_lp[2],
@@ -2161,14 +2161,14 @@ void mt6653_dumpWfsyscpupcr(struct ADAPTER *ad)
 			    var_lp);
 	}
 
-	DBGLOG(HAL, INFO, "wm pc=%s%s%s%s%s\n",
+	DBGLOG(HAL, LOUD, "wm pc=%s%s%s%s%s\n",
 		log_buf_pc[0],
 		log_buf_pc[1],
 		log_buf_pc[2],
 		log_buf_pc[3],
 		log_buf_pc[4]);
 
-	DBGLOG(HAL, INFO, "wm lp=%s%s%s%s%s\n",
+	DBGLOG(HAL, LOUD, "wm lp=%s%s%s%s%s\n",
 		log_buf_lp[0],
 		log_buf_lp[1],
 		log_buf_lp[2],
