@@ -63,6 +63,25 @@ dir /lib/firmware/arm 0755 0 0
 dir /lib/firmware/arm/mali 0755 0 0
 dir /lib/firmware/arm/mali/arch13.8 0755 0 0
 file /lib/firmware/arm/mali/arch13.8/mali_csffw.bin $IRFS/firmware/arm/mali/arch13.8/mali_csffw.bin 0644 0 0
+dir /lib/firmware/mediatek 0755 0 0
+dir /lib/firmware/mediatek/mt6991 0755 0 0
+# MT6653 Wi-Fi firmware + NVRAM and the conninfra/connfem configs
+file /lib/firmware/WIFI_RAM_CODE_MT6653_2g2a_1.bin $IRFS/firmware/WIFI_RAM_CODE_MT6653_2g2a_1.bin 0644 0 0
+file /lib/firmware/WIFI_MT6653_PATCH_MCU_2g2a_1_hdr.bin $IRFS/firmware/WIFI_MT6653_PATCH_MCU_2g2a_1_hdr.bin 0644 0 0
+file /lib/firmware/WIFI_MT6653_PHY_RAM_CODE_2g2a_1.bin $IRFS/firmware/WIFI_MT6653_PHY_RAM_CODE_2g2a_1.bin 0644 0 0
+file /lib/firmware/mediatek/WIFI_RAM_CODE_MT6653_2g2a_1.bin $IRFS/firmware/WIFI_RAM_CODE_MT6653_2g2a_1.bin 0644 0 0
+file /lib/firmware/mediatek/WIFI_MT6653_PATCH_MCU_2g2a_1_hdr.bin $IRFS/firmware/WIFI_MT6653_PATCH_MCU_2g2a_1_hdr.bin 0644 0 0
+file /lib/firmware/mediatek/WIFI_MT6653_PHY_RAM_CODE_2g2a_1.bin $IRFS/firmware/WIFI_MT6653_PHY_RAM_CODE_2g2a_1.bin 0644 0 0
+file /lib/firmware/WIFI $IRFS/firmware/WIFI 0644 0 0
+file /lib/firmware/mediatek/WIFI $IRFS/firmware/WIFI 0644 0 0
+file /lib/firmware/mediatek/mt6991/WIFI $IRFS/firmware/WIFI 0644 0 0
+file /lib/firmware/conninfra.cfg $IRFS/firmware/conninfra.cfg 0644 0 0
+file /lib/firmware/connfem.cfg $IRFS/firmware/connfem.cfg 0644 0 0
+# MT6653 Bluetooth firmware
+file /lib/firmware/BT_RAM_CODE_MT6653_2g2a_1_hdr.bin $IRFS/firmware/BT_RAM_CODE_MT6653_2g2a_1_hdr.bin 0644 0 0
+file /lib/firmware/BT_RAM_CODE_MT6653_1_1_hdr.bin $IRFS/firmware/BT_RAM_CODE_MT6653_1_1_hdr.bin 0644 0 0
+file /lib/firmware/BT_FW.cfg $IRFS/firmware/BT_FW.cfg 0644 0 0
+file /lib/firmware/mediatek/BT_RAM_CODE_MT6653_2g2a_1_hdr.bin $IRFS/firmware/BT_RAM_CODE_MT6653_2g2a_1_hdr.bin 0644 0 0
 file /init $IRFS/init 0755 0 0
 EOF
 cat "$IRFS/cpio_list"
