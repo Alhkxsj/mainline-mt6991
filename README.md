@@ -13,6 +13,7 @@ aarch64)完成,无交叉工具链。历史/约束见文末。
 | UFS 存储 | 挂载 Ubuntu rootfs 正常启动 |
 | DRM + 面板 | EXDMA3+BLENDER+OUTPROC 新架构;1280×2800;**60/90/120/144Hz**;DSC 1.2;DPMS off/on;`mediatekdrmfb` fbdev 控制台 |
 | 显示颜色 | 强制 OVL 只 advertise 8-bit,修 24.04 mutter 选 10-bit 导致的颜色错乱 |
+| 屏幕亮度 | AE031 面板 DCS `0x51`(非 PWM),自带 `backlight` 设备;保守上限 `0x800`/默认 `0x600`(厂商正常上限 `0xe0e`/硬件 `0xffe`),GNOME 滑块可调 |
 | GPU | panthor / Immortalis-G925:probe、渲染、devfreq/DVFS(338–1612MHz);修了空闲 runtime-PM 循环崩溃 |
 | 触摸屏 | Synaptics S3910 (TCM v1, SPI6):单点/多点、量程 12799×27999→1280×2800、边缘校准;固件不自动刷写 |
 | USB-C Gadget | CDC-ACM (g_serial);修 `VBUS_FRC_EN`、xsphy vendor 序列、NXP repeater 驱动 |

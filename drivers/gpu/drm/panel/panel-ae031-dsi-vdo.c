@@ -3,6 +3,7 @@
 // DRM driver for ae031_p_3_a0026 DSI video mode panel
 // realme GT7 (RMX6688) / MT6991
 
+#include <linux/backlight.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
@@ -25,6 +26,8 @@ struct ae031 {
 	struct gpio_desc *reset_gpio;
 	bool boot_handoff_done; /* bootloader already initialised the panel */
 	unsigned int vrefresh;  /* target refresh rate for the next init */
+	struct backlight_device *bl;
+	bool prepared;
 };
 
 static const char * const ae031_supply_names[AE031_NUM_SUPPLIES] = {
@@ -658,6 +661,8 @@ static int ae031_off(struct ae031 *ctx)
 	return dsi_ctx.accum_err;
 }
 
+static void ae031_apply_backlight(struct ae031 *ctx);
+
 static int ae031_prepare(struct drm_panel *panel)
 {
 	struct ae031 *ctx = to_ae031(panel);
@@ -682,6 +687,8 @@ static int ae031_prepare(struct drm_panel *panel)
 		if (ret)
 			dev_warn(dev, "Failed to take supply reference: %d\n",
 				 ret);
+		ctx->prepared = true;
+		ae031_apply_backlight(ctx);
 		return 0;
 	}
 
@@ -727,6 +734,9 @@ static int ae031_prepare(struct drm_panel *panel)
 		goto err_init;
 	}
 
+	ctx->prepared = true;
+	ae031_apply_backlight(ctx);
+
 	return 0;
 
 err_init:
@@ -745,6 +755,7 @@ static int ae031_unprepare(struct drm_panel *panel)
 	struct device *dev = &ctx->dsi->dev;
 	int ret;
 
+	ctx->prepared = false;
 
 	ret = ae031_off(ctx);
 	if (ret < 0)
@@ -865,6 +876,44 @@ void ae031_panel_notify_vrefresh(unsigned int vrefresh)
 }
 EXPORT_SYMBOL_GPL(ae031_panel_notify_vrefresh);
 
+/*
+ * DCS brightness (MIPI DCS 0x51).  The panel's hardware maximum is 0x0ffe and
+ * the vendor's normal-use ceiling is 0xe0e; both are far brighter than needed
+ * and a previous attempt that reached the hardware maximum caused
+ * over-brightness and heat.  Expose only a conservative range and hard-clamp
+ * it in the update callback so even a wrong userspace value cannot overdrive
+ * the backlight.
+ */
+#define AE031_BL_MAX		0x0800
+#define AE031_BL_DEFAULT	0x0600
+
+static int ae031_backlight_update(struct backlight_device *bl)
+{
+	struct ae031 *ctx = bl_get_data(bl);
+	u16 val = bl->props.brightness;	/* clamped to max_brightness by core */
+	u8 buf[2] = { val >> 8, val & 0xff };
+	int ret;
+
+	/* Do not touch the panel while it is powered down; the value is
+	 * re-applied when prepare() runs again. */
+	if (!ctx->prepared)
+		return 0;
+
+	ret = mipi_dsi_dcs_write(ctx->dsi, MIPI_DCS_SET_DISPLAY_BRIGHTNESS,
+				 buf, sizeof(buf));
+	return ret < 0 ? ret : 0;
+}
+
+static const struct backlight_ops ae031_backlight_ops = {
+	.update_status = ae031_backlight_update,
+};
+
+static void ae031_apply_backlight(struct ae031 *ctx)
+{
+	if (ctx->bl)
+		ae031_backlight_update(ctx->bl);
+}
+
 static const struct drm_panel_funcs ae031_panel_funcs = {
 	.prepare = ae031_prepare,
 	.unprepare = ae031_unprepare,
@@ -946,9 +995,25 @@ static int ae031_probe(struct mipi_dsi_device *dsi)
 
 	ctx->panel.prepare_prev_first = true;
 
-	ret = drm_panel_of_backlight(&ctx->panel);
-	if (ret)
-		return dev_err_probe(dev, ret, "Failed to get backlight\n");
+	/*
+	 * Brightness on this panel is a MIPI DCS 0x51 write, not a PWM/gpio
+	 * backlight, so register a small DCS backlight device ourselves.
+	 */
+	{
+		struct backlight_properties props = {
+			.type = BACKLIGHT_RAW,
+			.max_brightness = AE031_BL_MAX,
+			.brightness = AE031_BL_DEFAULT,
+		};
+
+		ctx->bl = devm_backlight_device_register(dev, "ae031-backlight",
+							 dev, ctx,
+							 &ae031_backlight_ops,
+							 &props);
+		if (IS_ERR(ctx->bl))
+			return dev_err_probe(dev, PTR_ERR(ctx->bl),
+					     "Failed to register backlight\n");
+	}
 
 	drm_panel_add(&ctx->panel);
 
